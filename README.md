@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="menu_img/logo.png" alt="Nyroxt's osu!skin creator" width="560">
+  <img src="https://raw.githubusercontent.com/soyelnyroxt/nyroxt_osu-skincreator/refs/heads/main/menu_img/nosu!skinlogo.png" alt="Nyroxt's osu!skin creator" width="560">
 </p>
 
 <p align="center">
