@@ -1,0 +1,2 @@
+# Español — es el idioma original del código: este archivo no necesita traducciones.
+# Formato: texto original => traducción
