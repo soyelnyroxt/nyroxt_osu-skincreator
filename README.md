@@ -1,1 +1,1 @@
-# nyroxt-s_osu-skincreator
+# Nyroxt's osu!skin creator!
