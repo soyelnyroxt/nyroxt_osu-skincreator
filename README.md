@@ -104,7 +104,7 @@ Users will see “New version available” in **Others → Check for updates…*
 
 ## ❤️ Support
 
-If you like the project, you can support it at **[nyroxt.online/donate](https://nyroxt.online/donate.html)**.
+If you like the project, you can support it at **[nyroxt.online/donate](https://ko-fi.com/soyelnyroxt)**.
 
 ## 📄 License
 
