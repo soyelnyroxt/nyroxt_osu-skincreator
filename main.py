@@ -14,6 +14,7 @@ import random
 import re
 import shutil
 import sys
+import tempfile
 import zipfile
 from collections import deque
 from pathlib import Path
@@ -39,7 +40,16 @@ APP_NAME = "nyroxt's osu! skin creator"
 APP_VERSION = "1.0"      # súbelo cada vez que publiques una versión (Release) en GitHub
 REPO = "soyelnyroxt/nyroxt_osu-skincreator"
 BASE_DIR = Path(__file__).resolve().parent
-PROJECTS_DIR = BASE_DIR / "projects"
+# en el .exe los recursos van dentro del paquete, pero los proyectos se guardan junto al .exe
+APP_DIR = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else BASE_DIR
+PROJECTS_DIR = APP_DIR / "projects"
+
+
+def _in_temp(path) -> bool:
+    try:
+        return Path(path).resolve().is_relative_to(Path(tempfile.gettempdir()).resolve())
+    except OSError:
+        return False
 
 SCENES = [("std", "Gameplay · osu!standard"), ("taiko", "Gameplay · osu!taiko"),
           ("catch", "Gameplay · osu!catch"), ("mania", "Gameplay · osu!mania"),
@@ -3515,6 +3525,7 @@ class MainWindow(QMainWindow):
         self.act_open = self._action(menu, "Abrir proyecto…", self.open_dialog, QKeySequence.StandardKey.Open)
         menu.addSeparator()
         self.act_save = self._action(menu, "Guardar proyecto", self.save, QKeySequence.StandardKey.Save)
+        self.act_saveas = self._action(menu, "Guardar proyecto como…", self.save_as, QKeySequence.StandardKey.SaveAs)
         self.act_export = self._action(menu, "Exportar .osk…", self.export, QKeySequence("Ctrl+E"))
         self.act_close = self._action(menu, "Cerrar proyecto", self.close_project, None)
         menu.addSeparator()
@@ -3559,8 +3570,9 @@ class MainWindow(QMainWindow):
 
     def _update_title(self):
         has = self.project is not None
-        for a in (self.act_undo, self.act_redo, self.act_discard, self.act_save, self.act_export, self.act_close, self.act_font, self.act_res, self.act_cv, self.act_gif):
+        for a in (self.act_undo, self.act_redo, self.act_discard, self.act_save, self.act_saveas, self.act_export, self.act_close, self.act_font, self.act_res, self.act_cv, self.act_gif):
             a.setEnabled(has)
+        self.act_save.setEnabled(has and getattr(self, "saved_once", False))
         if has:
             self.setWindowTitle(f"{self.project.name}{'*' if self.project.dirty else ''} — {APP_NAME}")
         else:
@@ -3607,7 +3619,7 @@ class MainWindow(QMainWindow):
         except OSError as ex:
             QMessageBox.critical(self, APP_NAME, f"No se pudo crear el proyecto:\n{ex}")
             return
-        self._enter(project)
+        self._enter(project, saved=False)
 
     def open_dialog(self):
         if not self._confirm_discard():
@@ -3626,8 +3638,9 @@ class MainWindow(QMainWindow):
             return
         self._enter(project)
 
-    def _enter(self, project: Project):
+    def _enter(self, project: Project, saved: bool = True):
         self.project = project
+        self.saved_once = saved      # «Guardar proyecto» se activa tras el primer «Guardar como…»
         self.editor.set_project(project)
         self.stack.setCurrentIndex(1)
         self._project_mode()
@@ -3661,6 +3674,8 @@ class MainWindow(QMainWindow):
     def save(self) -> bool:
         if self.project is None:
             return False
+        if not self.saved_once:     # aún no tiene carpeta elegida (también al exportar o cerrar)
+            return self.save_as()
         try:
             self.project.save()
         except OSError as ex:
@@ -3669,6 +3684,35 @@ class MainWindow(QMainWindow):
         self.editor.mark_saved()
         self._update_title()
         self.statusBar().showMessage("Proyecto guardado.", 4000)
+        return True
+
+    def save_as(self) -> bool:
+        if self.project is None:
+            return False
+        start = Path.home() / "Documents"
+        base = QFileDialog.getExistingDirectory(self, "¿Dónde guardar el proyecto?", str(start if start.is_dir() else Path.home()))
+        if not base:
+            return False
+        old, dest = self.project.path, Path(base) / core.safe_name(self.project.name)
+        if _in_temp(dest):
+            QMessageBox.warning(self, APP_NAME, "Esa carpeta es temporal y se borra sola. Elige otra.")
+            return False
+        if dest.resolve() != old.resolve():
+            if dest.exists() and any(dest.iterdir()):
+                QMessageBox.warning(self, APP_NAME, f"La carpeta ya contiene archivos:\n{dest}\n\nElige otra carpeta.")
+                return False
+            try:
+                if old.is_dir():   # copia también las imágenes, fuentes y sonidos importados
+                    shutil.copytree(old, dest, dirs_exist_ok=True)
+            except OSError as ex:
+                QMessageBox.critical(self, APP_NAME, f"No se pudo copiar el proyecto:\n{ex}")
+                return False
+            self.project.path = dest
+        self.saved_once = True
+        if not self.save():
+            return False
+        self._remember(dest)
+        self.statusBar().showMessage(f"Proyecto guardado en {dest}", 6000)
         return True
 
     # ---- Discord Rich Presence -------------------------------------------------------------
