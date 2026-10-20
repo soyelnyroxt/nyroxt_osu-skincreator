@@ -7,7 +7,7 @@ import queue
 import threading
 import time
 
-DEFAULT_ID = "1561869771954331708"
+DEFAULT_ID = "YOUR_ID_CLIENT"
 BUTTONS = [{"label": "Download for desktop", "url": "https://github.com/soyelnyroxt/nyroxt_osu-skincreator"}]
 MODE_ICONS = {"std": "std_icon", "taiko": "taiko_icon", "catch": "ctb_icon", "mania": "mania_icon"}
 SMALL_TEXT = {"std": "osu!standard", "taiko": "osu!taiko", "catch": "osu!catch", "mania": "osu!mania"}
